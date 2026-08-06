@@ -109,12 +109,20 @@ class Round:
         self.current_turn = 0
         self.dutch_caller = None
         self.round_over = False
+        self.peeked_players = set()
 
         for i in range(len(players)):
             cards = []
             for _ in range(0, 4):
                 cards.append(self.deck.draw())
             self.grids[players[i]] = PlayerGrid(cards)
+
+    def initial_peek(self, player, pos_a, pos_b):
+        if player in self.peeked_players:
+            raise RuntimeError("You cannot look at your cards again")
+        else:
+            self.peeked_players.add(player)
+        return self.play_queen(player, pos_a, player, pos_b)
         
     def draw_card(self):
         return self.deck.draw()
@@ -167,40 +175,10 @@ class Round:
         winner = min(totals_dict, key=totals_dict.get)
         return (totals_dict, winner)
 
-# r = Round(["Alice", "Bob"])
-# print(r.grids["Alice"])
-# print(r.grids["Bob"])
-
-# card = r.draw_card()
-# print("drew:", card)
-# result = r.resolve_draw(card, swap_position=1)
-# print("discarded:", result)
-# print(r.grids["Alice"])  # position 1 should now show the drawn card
-
-# r = Round(["Alice", "Bob"])
-# print("before:", r.grids["Alice"], "|", r.grids["Bob"])
-
-# # swap Alice's own position 0 and 2 with each other
-# r.play_jack("Alice", 0, "Alice", 2)
-# print("after same-grid swap:", r.grids["Alice"])
-
-# # swap Alice's position 1 with Bob's position 3
-# r.play_jack("Alice", 1, "Bob", 3)
-# print("after cross-grid swap:", r.grids["Alice"], "|", r.grids["Bob"])
-
-r = Round(["Alice", "Bob", "Carol"])
-print(r.current_turn, r.is_round_over())  # expect 0 False
-
-r.advance_turn()
-print(r.current_turn, r.is_round_over())  # expect 1 False
-
-r.call_dutch()  # Bob (index 1) calls Dutch
-print(r.current_turn, r.dutch_caller, r.is_round_over())  # expect 2, "Bob", False
-
-r.advance_turn()  # Carol's final turn happens elsewhere; this simulates turn passing
-print(r.current_turn, r.is_round_over())  # expect 0, False
-
-r.advance_turn()  # Alice's final turn passes too
-print(r.current_turn, r.is_round_over())  # expect 1, True  <- back to Bob, round over
-
-print (r.score())
+r = Round(["Alice", "Bob"])
+print(r.initial_peek("Alice", 0, 2))  # should show two real cards
+try:
+    r.initial_peek("Alice", 1, 3)  # should raise
+    print("BUG: should have raised!")
+except RuntimeError as e:
+    print("correctly blocked:", e)
