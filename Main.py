@@ -58,14 +58,41 @@ class Deck:
     def reshuffle_discard_into_deck(self):
         if len(self.discard_pile) == 0:
             raise RuntimeError("deck and discard both empty")  
+        self.cards = self.discard_pile
         self.discard_pile = []
         self.shuffle()
 
+class PlayerGrid:
+    def __init__(self, cards):
+        # cards: a list of exactly 4 Card objects, dealt at round start
+        self.cards = cards
+
+    def get_card(self, position):
+        return self.cards[position]
+
+    def swap(self, position, new_card):
+        old_card = self.cards[position]
+        self.cards[position] = new_card
+        return old_card
+
+    def total_value(self):
+        total = 0
+        for card in self.cards:
+            total += card.value
+        return total
+
+    def __repr__(self):
+        return " ".join(str(card) for card in self.cards)
+
 d = Deck()
 print(len(d.cards))  # expect 54
-seen = set()
-for _ in range(54):
-    c = d.draw()
-    print(c, c.value)
-    seen.add(repr(c))
-print(len(seen))  # expect 54 — catches accidental duplicates
+c = []
+for i in range(0, 4):
+    c.append(d.draw())
+p = PlayerGrid(c)
+print(p)
+print(p.total_value())
+nc = Card("2", "♥")
+p.swap(1, nc)
+print(p)
+print(p.total_value())
