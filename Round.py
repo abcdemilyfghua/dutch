@@ -52,7 +52,6 @@ class Round:
 
     def call_dutch(self):
         self.dutch_caller = self.players[self.current_turn]
-        self.advance_turn()
 
     def advance_turn(self):
         if self.current_turn != len(self.players) - 1:
