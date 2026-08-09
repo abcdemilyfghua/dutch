@@ -2,12 +2,6 @@ from Round import Round
 from RandomAI import RandomAI
 import random
 
-players = ["Alice", "Mordna"]
-agents = {
-    "Alice": None,       # human
-    "Mordna": RandomAI(),   # AI
-}
-
 def get_yes_no(prompt):
     # keep asking until they type something starting with y or n,
     # return True/False.
@@ -19,8 +13,29 @@ def get_yes_no(prompt):
             return False
         print("Please enter yes or no.")
 
+def setup_players():
+    num_players = int(input("How many players? "))
+    players = []
+    agents = {}
+    for i in range(num_players):
+        is_ai = get_yes_no(f"Is player {i+1} an AI? (y/n) ")
+        if is_ai:
+            name = "Mordna"
+            counter = 2
+            while name in players:
+                name = f"Mordna {counter}"
+                counter += 1
+            agents[name] = RandomAI()
+        else:
+            name = input(f"Player {i+1} name: ")
+            while name in players:
+                name = input(f"A player with this name already exists. Try another. Player {i+1} name: ")
+            agents[name] = None
+        players.append(name)
+    return players, agents
+
 def main():
-    players = ["Alice", "Mordna"]  # start with just 2 for testing
+    players, agents = setup_players()
     r = Round(players)
 
     # Initial peek for everyone before play starts
