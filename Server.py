@@ -18,7 +18,7 @@ async def broadcast(room, message):
 @app.post("/rooms")
 def create_room():
     room_id = str(uuid.uuid4())
-    rooms[room_id] = {"players": [], "agents": {}, "round": None, "connections": {}}
+    rooms[room_id] = {"players": [], "agents": {}, "round": None, "connections": {}, "pending_draw": None}
     return {"room_id": room_id}
 
 @app.post("/rooms/{room_id}/join")
@@ -68,18 +68,31 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, player_name: st
     room["connections"][player_name] = websocket
 
     try:
-            while True:
-                data = await websocket.receive_json()
-                r = room["round"]
+        while True:
+            data = await websocket.receive_json()
+            r = room["round"]
 
-                current = r.players[r.current_turn]
-                if player_name != current:
-                    await send_to_player(room, player_name, {"error": "not your turn"})
-                    continue
+            current = r.players[r.current_turn]
+            if player_name != current:
+                await send_to_player(room, player_name, {"error": "not your turn"})
+                continue
 
-                if data["action"] == "draw":
-                    drawn = r.draw_card()
-                    await send_to_player(room, player_name, {"action": "draw_result", "card": str(drawn)})
-                    await broadcast(room, {"action": "draw", "player": player_name})
+            if data["action"] == "draw":
+                drawn = r.draw_card()
+                room["pending_draw"] = drawn
+                await send_to_player(room, player_name, {"action": "draw_result", "card": str(drawn)})
+                await broadcast(room, {"action": "draw", "player": player_name})
+
+            elif data["action"] == "swap":
+                pos = data["position"]
+                discarded = r.resolve_draw(room["pending_draw"], swap_position=pos)
+                room["pending_draw"] = None
+                await broadcast(room, {"action": "discarded_result", "card": str(discarded)})
+
+            elif data["action"] == "discard":
+                discarded = r.resolve_draw(room["pending_draw"], swap_position=None)
+                room["pending_draw"] = None
+                await broadcast(room, {"action": "discarded_result", "card": str(discarded)})
+
     except WebSocketDisconnect:
         room["connections"].pop(player_name, None)

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dutch WS Test</title>
+</head>
+<body>
+  <h3>WebSocket test</h3>
+  <p>
+    Room ID: <input id="roomId" size="40">
+    Player name: <input id="playerName" value="Alice">
+    <button onclick="connect()">Connect</button>
+  </p>
+  <p>
+    <button onclick="draw()">Draw</button>
+  </p>
+  <p>
+    Position: <input id="swapPos" size="3" value="0">
+    <button onclick="swap()">Swap</button>
+  </p>
+  <p>
+    <button onclick="discard()">Discard</button>
+  </p>
+  <pre id="log" style="background:#eee; padding:10px; height:300px; overflow:auto;"></pre>
+
+  <script>
+    let ws = null;
+
+    function log(msg) {
+      document.getElementById("log").textContent += msg + "\n";
+    }
+
+    function connect() {
+      const roomId = document.getElementById("roomId").value;
+      const name = document.getElementById("playerName").value;
+      ws = new WebSocket(`ws://127.0.0.1:8000/rooms/${roomId}/ws/${name}`);
+
+      ws.onopen = () => log("connected as " + name);
+      ws.onmessage = (event) => log("received: " + event.data);
+      ws.onclose = (event) => log("closed: code=" + event.code + " reason=" + event.reason);
+      ws.onerror = (event) => log("error!");
+    }
+
+    function draw() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({action: "draw"}));
+        log("sent: draw");
+      } else {
+        log("not connected");
+      }
+    }
+
+    function swap() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        const pos = parseInt(document.getElementById("swapPos").value);
+        ws.send(JSON.stringify({action: "swap", position: pos}));
+        log("sent: swap " + pos);
+      } else {
+        log("not connected");
+      }
+    }
+
+    function discard() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({action: "discard"}));
+        log("sent: discard");
+      } else {
+        log("not connected");
+      }
+    }
+  </script>
+</body>
+</html>
