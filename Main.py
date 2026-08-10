@@ -1,5 +1,5 @@
 from Round import Round
-from RandomAI import RandomAI
+from RandomAI import Mordna
 import random
 
 def get_yes_no(prompt):
@@ -25,7 +25,7 @@ def setup_players():
             while name in players:
                 name = f"Mordna {counter}"
                 counter += 1
-            agents[name] = RandomAI()
+            agents[name] = Mordna()
         else:
             name = input(f"Player {i+1} name: ")
             while name in players:
@@ -89,10 +89,13 @@ def main():
                 else:
                     use_ability = agents[current].decide_use_ability()
                 if use_ability:
-                    pos_a_player = input("Which player? ")
-                    pos_a = int(input("Which position (0-3)? "))
-                    pos_b_player = input("Which player? ")
-                    pos_b = int(input("Which position (0-3)? "))
+                    if agents[current] is None:
+                        pos_a_player = input("Which player? ")
+                        pos_a = int(input("Which position (0-3)? "))
+                        pos_b_player = input("Which player? ")
+                        pos_b = int(input("Which position (0-3)? "))
+                    else:
+                        pos_a_player, pos_a, pos_b_player, pos_b = agents[current].decide_targets(players)
                     r.play_jack(pos_a_player, pos_a, pos_b_player, pos_b)
                     print("Swap done.")
 
@@ -102,10 +105,13 @@ def main():
                 else:
                     use_ability = agents[current].decide_use_ability()
                 if use_ability:
-                    pos_a_player = input("Which player? ")
-                    pos_a = int(input("Which position (0-3)? "))
-                    pos_b_player = input("Which player? ")
-                    pos_b = int(input("Which position (0-3)? "))                
+                    if agents[current] is None:
+                        pos_a_player = input("Which player? ")
+                        pos_a = int(input("Which position (0-3)? "))
+                        pos_b_player = input("Which player? ")
+                        pos_b = int(input("Which position (0-3)? "))
+                    else:
+                        pos_a_player, pos_a, pos_b_player, pos_b = agents[current].decide_targets(players)
                     queen_peeked = r.play_queen(pos_a_player, pos_a, pos_b_player, pos_b)
                     print(queen_peeked)
 
