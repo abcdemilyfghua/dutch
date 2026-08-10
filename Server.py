@@ -6,6 +6,15 @@ from RandomAI import Mordna
 app = FastAPI()
 rooms = {}
 
+async def send_to_player(room, player_name, message):
+    ws = room["connections"].get(player_name)
+    if ws is not None:
+            await ws.send_json(message)
+
+async def broadcast(room, message):
+    for ws in room["connections"].values():
+        await ws.send_json(message)
+
 @app.post("/rooms")
 def create_room():
     room_id = str(uuid.uuid4())
@@ -59,7 +68,18 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, player_name: st
     room["connections"][player_name] = websocket
 
     try:
-        while True:
-            data = await websocket.receive_json()
+            while True:
+                data = await websocket.receive_json()
+                r = room["round"]
+
+                current = r.players[r.current_turn]
+                if player_name != current:
+                    await send_to_player(room, player_name, {"error": "not your turn"})
+                    continue
+
+                if data["action"] == "draw":
+                    drawn = r.draw_card()
+                    await send_to_player(room, player_name, {"action": "draw_result", "card": str(drawn)})
+                    await broadcast(room, {"action": "draw", "player": player_name})
     except WebSocketDisconnect:
         room["connections"].pop(player_name, None)
