@@ -20,6 +20,19 @@
   <p>
     <button onclick="discard()">Discard</button>
   </p>
+  <p>
+    <button onclick="call_dutch()">Call Dutch</button>
+  </p>
+  <p>
+    <button onclick="skip_ability()">Skip Ability</button>
+  </p>
+  <p>
+    Player A: <input id="playerA">
+    Position A: <input id="posA" size="3" value="0">
+    Player B: <input id="playerB">
+    Position B: <input id="posB" size="3" value="0">
+    <button onclick="use_ability()">Use Ability</button>
+  </p>  
   <pre id="log" style="background:#eee; padding:10px; height:300px; overflow:auto;"></pre>
 
   <script>
@@ -67,6 +80,43 @@
         log("not connected");
       }
     }
+
+    function call_dutch() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({action: "call_dutch"}));
+        log("sent: call_dutch");
+      } else {
+        log("not connected");      
+      }
+    }
+
+    function skip_ability() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({action: "skip_ability"}));
+        log("sent: skip_ability");
+      } else {
+        log("not connected");
+      }
+    }
+
+    function use_ability() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        const playera = document.getElementById("playerA").value;
+        const posa = parseInt(document.getElementById("posA").value);
+        const playerb = document.getElementById("playerB").value;
+        const posb = parseInt(document.getElementById("posB").value);               
+        ws.send(JSON.stringify({
+          action: "use_ability", 
+          target1_player: playera, 
+          target1_pos: posa, 
+          target2_player: playerb, 
+          target2_pos: posb}));
+        log("sent: use_ability" + playera + "" + posa + "" + playerb + "" + posb);
+      } else {
+        log("not connected");
+      }
+    }   
+    
   </script>
 </body>
 </html>
