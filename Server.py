@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 import uuid
 from Round import Round
 from RandomAI import Mordna
@@ -9,7 +9,7 @@ rooms = {}
 @app.post("/rooms")
 def create_room():
     room_id = str(uuid.uuid4())
-    rooms[room_id] = {"players": [], "agents": {}, "round": None}
+    rooms[room_id] = {"players": [], "agents": {}, "round": None, "connections": {}}
     return {"room_id": room_id}
 
 @app.post("/rooms/{room_id}/join")
@@ -33,7 +33,6 @@ def join_room(room_id: str, name: str, is_ai: bool = False):
     room["players"].append(name)
     return {"players": room["players"]}
 
-
 @app.post("/rooms/{room_id}/start")
 def start_room(room_id: str):
     if room_id not in rooms:
@@ -47,3 +46,20 @@ def start_room(room_id: str):
     room["round"] = new_round
 
     return "The game has started."
+
+@app.websocket("/rooms/{room_id}/ws/{player_name}")
+async def websocket_endpoint(websocket: WebSocket, room_id: str, player_name: str):
+    await websocket.accept()
+
+    if room_id not in rooms:
+        await websocket.close(code=1008, reason="Room not found")
+        return
+
+    room = rooms[room_id]
+    room["connections"][player_name] = websocket
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+    except WebSocketDisconnect:
+        room["connections"].pop(player_name, None)
