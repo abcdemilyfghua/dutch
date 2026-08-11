@@ -6,6 +6,18 @@ from RandomAI import Mordna
 app = FastAPI()
 rooms = {}
 
+def build_game_state(room):
+    r = room["round"]
+    grids = {}
+    for player in room["players"]:
+        grids[player] = ["?"] * len(r.grids[player].cards)
+    return {
+        "action": "game_state",
+        "current_turn": r.players[r.current_turn],
+        "grids": grids,
+        "round_over": r.is_round_over(),
+    }
+
 async def send_to_player(room, player_name, message):
     ws = room["connections"].get(player_name)
     if ws is not None:
@@ -75,6 +87,9 @@ def join_room(room_id: str, name: str, is_ai: bool = False):
         raise HTTPException(status_code=404, detail="Room not found")
     room = rooms[room_id]
 
+    if room["round"] is not None:
+        raise HTTPException(status_code=400, detail="Game already started")
+
     if is_ai:
         name = "Mordna"
         counter = 2
@@ -116,6 +131,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, player_name: st
     room["connections"][player_name] = websocket
     await send_to_player(room, player_name, {"action": "room_state", "connected_players": list(room["connections"].keys())})
     await broadcast(room, {"action": "player_connected", "player": player_name})
+
+    if room["round"] is not None:
+        await send_to_player(room, player_name, build_game_state(room))
 
     try:
         while True:
