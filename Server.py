@@ -21,6 +21,47 @@ async def advance_and_check(room):
     if r.is_round_over():
         totals, winner = r.score()
         await broadcast(room, {"action": "round_over", "totals": totals, "winner": winner})
+    else:
+        await play_ai_turns(room)
+
+async def play_ai_turns(room):
+    r = room["round"]
+    while not r.is_round_over():
+        current = r.players[r.current_turn]
+        agent = room["agents"][current]
+        if agent is None:
+            return  # it's a human's turn now — stop, wait for their message
+
+        if agent.decide_dutch():
+            r.call_dutch()
+            await broadcast(room, {"action": "dutch_called", "player": current})
+        else:
+            drawn = r.draw_card()
+            await broadcast(room, {"action": "draw", "player": current})
+            pos = agent.decide_swap_position()
+            discarded = r.resolve_draw(drawn, swap_position=pos)
+            await broadcast(room, {"action": "discarded_result", "card": str(discarded)})
+
+            if discarded.rank in ("J", "Q"):
+                if agent.decide_use_ability():
+                    (pos_a_player, pos_a, pos_b_player, pos_b) = agent.decide_targets(room["players"])                
+
+                    if discarded.rank == "J":
+                        r.play_jack(pos_a_player, pos_a, pos_b_player, pos_b)
+                        await broadcast(room, {"action": "jack_swap", "player": current,
+                            "target1_player": pos_a_player, "target1_pos": pos_a,
+                            "target2_player": pos_b_player, "target2_pos": pos_b})
+
+                    if discarded.rank == "Q":
+                        r.play_queen(pos_a_player, pos_a, pos_b_player, pos_b)
+                        await broadcast(room, {"action": "queen_peek", "player": current,
+                            "target1_player": pos_a_player, "target1_pos": pos_a,
+                            "target2_player": pos_b_player, "target2_pos": pos_b})
+
+        r.advance_turn()
+
+    totals, winner = r.score()
+    await broadcast(room, {"action": "round_over", "totals": totals, "winner": winner})
 
 @app.post("/rooms")
 def create_room():
@@ -50,7 +91,7 @@ def join_room(room_id: str, name: str, is_ai: bool = False):
     return {"players": room["players"]}
 
 @app.post("/rooms/{room_id}/start")
-def start_room(room_id: str):
+async def start_room(room_id: str):
     if room_id not in rooms:
         raise HTTPException(status_code=404, detail="Room not found")
     room = rooms[room_id]
@@ -60,7 +101,7 @@ def start_room(room_id: str):
 
     new_round = Round(room["players"])
     room["round"] = new_round
-
+    await play_ai_turns(room)
     return "The game has started."
 
 @app.websocket("/rooms/{room_id}/ws/{player_name}")
